@@ -1,0 +1,4 @@
+base45
+pyzbar
+pillow
+flynn
