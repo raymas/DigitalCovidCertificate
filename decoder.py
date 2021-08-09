@@ -1,13 +1,15 @@
-from PIL import Image
-from pyzbar import pyzbar
-import curses
 import zlib
 import base45
-import flynn
+import base64
 import os
 import sys
 import json
 import argparse
+import cbor2
+from PIL import Image
+from pyzbar import pyzbar
+from cose.messages import CoseMessage
+from cose.headers import Algorithm, KID
 
 def main(image_path):
     # Load the image
@@ -24,21 +26,23 @@ def main(image_path):
     data = zlib.decompress(data)
 
     # deserialize
-    data = flynn.decoder.loads(data)
+    cose = CoseMessage.decode(data)
+    tag = cose.cbor_tag
+    algorithm = cose.get_attr(Algorithm)
+    key_id = cose.get_attr(KID)
+    signature = cose.signature
 
-    # Parse each serialized values
-    content = data[1]
-    header = content[0]
-    medical = content[2]
-    signature = content[3]
+    cbor = cbor2.loads(cose.payload)
 
-    medical_json = flynn.decoder.loads(medical)
-    
-    print("header " + header.hex())
+    print("Cose key algorithm: " + algorithm.fullname)
+    print("Cose key curve: " + str(algorithm.get_curve()))
+    print("Cose key id: " + base64.b64encode(key_id).decode('utf-8'))
     print("-"*35)
-    print(json.dumps(medical_json, indent=4))
+    print("CBOR tag: " + str(tag))
+    print("Medical data:")
+    print(json.dumps(cbor, indent=4))
     print("-"*35)
-    print("signature  " + signature.hex())
+    print("Cose signature [length:" + str(len(signature)) + "] " + signature.hex())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Decode the EU digital covid certificate.')

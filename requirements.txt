@@ -1,4 +1,5 @@
 base45
 pyzbar
 pillow
-flynn
+cbor2
+cose
